@@ -23,7 +23,39 @@ int mod2()
     }
     return x;
 }
+/*
+Assembly code for mod2 on ARM (macbook):
 
+    stp    x29, x30, [sp, #-0x20]!
+    mov    x29, sp
+    str    wzr, [x29, #0x1c]         // Stores 0 in int x
+    str    wzr, [x29, #0x18]         // Stores 0 in int i
+    b      0x104805254               // branch jump to (ldr w1, [x29, #0x18]) command
+    ldr    w0, [x29, #0x18]
+    and    w0, w0, #0x1             // Checks if i is even, there is no modulo operation
+    cmp    w0, #0x0                 // Sets NZCV flags, which the below command then uses to determine if b.ne
+    b.ne   0x104805248              // Jump to (ldr w0, [x29, #0x18]) command if Z flag is 0, which is true if cmp command evaluates to 0
+    ldr    w0, [x29, #0x1c]         // This and next 2 commands evaluate to ++x
+    add    w0, w0, #0x1
+    str    w0, [x29, #0x1c]
+    ldr    w0, [x29, #0x1c]         // This and next 2 commands evaluate to ++x
+    add    w0, w0, #0x1
+    str    w0, [x29, #0x1c]
+    ldr    w0, [x29, #0x18]         // This and next 2 commands evaluate to ++i
+    add    w0, w0, #0x1
+    str    w0, [x29, #0x18]
+    ldr    w1, [x29, #0x18]         // This and next 2 commands evaluate to comparing i to 10000
+    mov    w0, #0x270f
+    cmp    w1, w0
+    b.le   0x104805220             // Jump to (ldr w0, [x29, #0x18]) command above if
+    ldr    w0, [x29, #0x1c]
+    ldp    x29, x30, [sp], #0x20
+    ret
+
+ */
+
+
+// TODO: Analyze assembly for mod3 function
 int mod3()
 {
     int x = 0;
@@ -151,5 +183,24 @@ BENCHMARK(BM_Mod2);
 BENCHMARK(BM_Mod3);
 BENCHMARK(BM_Mod5);
 BENCHMARK(BM_Mod1000);
+// The above are a bit flawed, because of
+
+/*
+    int count(const std::vector<int>& values)
+    {
+        int x = 0;
+
+        for (int value : values) {
+            if (value != 0) {
+                ++x;
+            }
+        }
+
+        return x;
+    }
+ */
+
+
+
 BENCHMARK(BM_MajorityMiss);
 BENCHMARK(BM_MajorityHit);
