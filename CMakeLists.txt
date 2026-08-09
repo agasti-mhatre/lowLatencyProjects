@@ -9,5 +9,5 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -fno-omit-frame-pointer -
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer")
 
 add_subdirectory(order_book)
-add_subdirectory(experiments)
 add_subdirectory(spsc_queue)
+add_subdirectory(experiments)
