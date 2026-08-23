@@ -302,7 +302,7 @@ static void BM_ModXLikely(benchmark::State& state) {
     unsigned long x = static_cast<unsigned long>(state.range(0));
     for (auto _ : state) {
         benchmark::DoNotOptimize(x);
-        auto result = modX(x);
+        auto result = modXLikely(x);
         benchmark::DoNotOptimize(result);
     }
 }
@@ -311,7 +311,7 @@ static void BM_ModXUnlikely(benchmark::State& state) {
     unsigned long x = static_cast<unsigned long>(state.range(0));
     for (auto _ : state) {
         benchmark::DoNotOptimize(x);
-        auto result = modX(x);
+        auto result = modXUnlikely(x);
         benchmark::DoNotOptimize(result);
     }
 }
@@ -338,32 +338,71 @@ BENCHMARK(BM_ModXUnlikely)->Arg(k);
 -------------------------------------------------------------------
 Benchmark                         Time             CPU   Iterations
 -------------------------------------------------------------------
-BM_ModX/100                 5347786 ns      5344431 ns          130
-BM_ModX/117                 5322313 ns      5312924 ns          131
-BM_ModX/500                 5336963 ns      5330664 ns          131
-BM_ModX/10000               5379748 ns      5363763 ns          131
-BM_ModX/10000000            5195748 ns      5185037 ns          135
-BM_ModXLikely/100           5336776 ns      5330623 ns          130
-BM_ModXLikely/117           5815688 ns      5651667 ns          132
-BM_ModXLikely/500           5305938 ns      5305031 ns          131
-BM_ModXLikely/10000         5318774 ns      5318331 ns          133
-BM_ModXLikely/10000000      5169148 ns      5168259 ns          135
-BM_ModXUnlikely/100         5321463 ns      5320409 ns          132
-BM_ModXUnlikely/117         5308007 ns      5307098 ns          132
-BM_ModXUnlikely/500         5314462 ns      5313386 ns          132
-BM_ModXUnlikely/10000       5306268 ns      5305458 ns          131
-BM_ModXUnlikely/10000000    5167044 ns      5165926 ns          136
+BM_ModX/100                 5282775 ns      5280662 ns          133
+BM_ModX/117                 5292172 ns      5288414 ns          133
+BM_ModX/500                 5289674 ns      5287939 ns          132
+BM_ModX/10000               5283601 ns      5281707 ns          133
+BM_ModX/10000000            5137059 ns      5135774 ns          137
+BM_ModXLikely/100           5276888 ns      5276470 ns          132
+BM_ModXLikely/117           5271931 ns      5271030 ns          133
+BM_ModXLikely/500           5273774 ns      5272835 ns          133
+BM_ModXLikely/10000         5298738 ns      5298353 ns          133
+BM_ModXLikely/10000000      5150119 ns      5149007 ns          135
+BM_ModXUnlikely/100         5281969 ns      5280652 ns          132
+BM_ModXUnlikely/117         5328615 ns      5324946 ns          130
+BM_ModXUnlikely/500         5311526 ns      5306679 ns          131
+BM_ModXUnlikely/10000       5290221 ns      5289129 ns          132
+BM_ModXUnlikely/10000000    5145523 ns      5144529 ns          136
 */
 
 // Analyze assembly for attribute code above
 
 /*
-modX:
-
+modX(unsigned long):
+    mov    x3, x0
+    mov    x5, #0x9680                ; =38528
+    stp    x29, x30, [sp, #-0x10]!
+    mov    x1, #0x0                   ; =0
+    mov    x0, #0x0                   ; =0
+    sub    x6, x3, #0x1
+    movk   x5, #0x98, lsl #16
+    mov    x29, sp
+    udiv   x2, x1, x3
+    add    x4, x0, x6
+    msub   x2, x2, x3, x1
+    add    x1, x1, #0x1
+    cmp    x2, #0x0
+    csinc  x0, x4, x0, ne
+    cmp    x1, x5
+    b.ne   0x100691340                ; <+32> at branch_prediction_benchmark.cpp:248:16
+    ldp    x29, x30, [sp], #0x10
+    ret
 */
 
 /*
-modLikelyX:
+modXLikely(unsigned long):
+    mov    x3, x0
+    mov    x5, #0x9680                ; =38528
+    stp    x29, x30, [sp, #-0x10]!
+    mov    x1, #0x0                   ; =0
+    mov    x0, #0x0                   ; =0
+    sub    x6, x3, #0x1
+    movk   x5, #0x98, lsl #16
+    mov    x29, sp
+    udiv   x2, x1, x3
+    add    x4, x0, x6
+    msub   x2, x2, x3, x1
+    add    x1, x1, #0x1
+    cmp    x2, #0x0
+    csinc  x0, x4, x0, ne
+    cmp    x1, x5
+    b.ne   0x10098d460                ; <+32> at branch_prediction_benchmark.cpp:264:16
+    ldp    x29, x30, [sp], #0x10
+    ret
+*/
+
+/*
+modUnlikelyX:
 
 */
 
