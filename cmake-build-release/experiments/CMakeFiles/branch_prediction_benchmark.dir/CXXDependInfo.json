@@ -1,0 +1,30 @@
+{
+	"bmi-installation" : null,
+	"compiler-frontend-variant" : "GNU",
+	"compiler-id" : "GNU",
+	"compiler-simulate-id" : "",
+	"config" : "Release",
+	"cxx-modules" : {},
+	"database-info" : null,
+	"dir-cur-bld" : "/Users/agastimhatre/lowLatencyProjects/cmake-build-release/experiments",
+	"dir-cur-src" : "/Users/agastimhatre/lowLatencyProjects/experiments",
+	"dir-top-bld" : "/Users/agastimhatre/lowLatencyProjects/cmake-build-release",
+	"dir-top-src" : "/Users/agastimhatre/lowLatencyProjects",
+	"exports" : [],
+	"forward-modules-from-target-dirs" : [],
+	"include-dirs" : 
+	[
+		"_deps/googlebenchmark-src/include"
+	],
+	"language" : "CXX",
+	"linked-target-dirs" : [],
+	"module-dir" : "/Users/agastimhatre/lowLatencyProjects/cmake-build-release/experiments/CMakeFiles/branch_prediction_benchmark.dir",
+	"sources" : 
+	{
+		"experiments/CMakeFiles/branch_prediction_benchmark.dir/branch_prediction_benchmark.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/Users/agastimhatre/lowLatencyProjects/experiments/branch_prediction_benchmark.cpp"
+		}
+	}
+}

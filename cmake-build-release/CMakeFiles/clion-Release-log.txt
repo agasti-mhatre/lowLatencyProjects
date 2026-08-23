@@ -1,0 +1,10 @@
+/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/aarch64/ninja -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/gcc/16.2.0/bin/gcc-16 -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/gcc/16.2.0/bin/g++-16 -G Ninja -S /Users/agastimhatre/lowLatencyProjects -B /Users/agastimhatre/lowLatencyProjects/cmake-build-release
+-- Google Benchmark version: v1.9.4, normalized to 1.9.4
+-- Performing Test HAVE_STD_REGEX -- success
+-- Performing Test HAVE_GNU_POSIX_REGEX -- failed to compile
+-- Performing Test HAVE_POSIX_REGEX -- success
+-- Performing Test HAVE_STEADY_CLOCK -- success
+-- Performing Test HAVE_PTHREAD_AFFINITY -- failed to compile
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/agastimhatre/lowLatencyProjects/cmake-build-release

@@ -232,12 +232,14 @@ static void BM_MajorityHit(benchmark::State& state)
 
 
 // These next experiments all use optimized builds which require:
-// 1. target_compile_options(branch_prediction_benchmark PRIVATE -O2)
-// in the local CMakeLists.txt
+// 1. RelWithDebInfo CMake profile
 // 2. __attribute__((noinline)) attribute above each function I want
 // to put a breakpoint in
+// optional instead of doing #1:
+// target_compile_options(branch_prediction_benchmark PRIVATE -O2)
+// in the local CMakeLists.txt
 
-static const unsigned long k = 10000000;
+static const unsigned long k = 100000;
 
 __attribute__((noinline))
 unsigned long modX(unsigned long x)
@@ -315,95 +317,121 @@ static void BM_ModXUnlikely(benchmark::State& state) {
         benchmark::DoNotOptimize(result);
     }
 }
+/*
+from lldb
+(base) agastimhatre@Agastis-MacBook-Air lowLatencyProjects % nm ./cmake-build-release/experiments/branch_prediction_benchmark \
+| c++filt \
+| grep modXLikely
+0000000100001440 T modXLikely(unsigned long)
+*/
 
 BENCHMARK(BM_ModX)->Arg(100);
 BENCHMARK(BM_ModX)->Arg(117);
 BENCHMARK(BM_ModX)->Arg(500);
-BENCHMARK(BM_ModX)->Arg(10000);
-BENCHMARK(BM_ModX)->Arg(k);
+BENCHMARK(BM_ModX)->Arg(1000);
 
 BENCHMARK(BM_ModXLikely)->Arg(100);
 BENCHMARK(BM_ModXLikely)->Arg(117);
 BENCHMARK(BM_ModXLikely)->Arg(500);
-BENCHMARK(BM_ModXLikely)->Arg(10000);
-BENCHMARK(BM_ModXLikely)->Arg(k);
+BENCHMARK(BM_ModXLikely)->Arg(1000);
 
 BENCHMARK(BM_ModXUnlikely)->Arg(100);
 BENCHMARK(BM_ModXUnlikely)->Arg(117);
 BENCHMARK(BM_ModXUnlikely)->Arg(500);
-BENCHMARK(BM_ModXUnlikely)->Arg(10000);
-BENCHMARK(BM_ModXUnlikely)->Arg(k);
+BENCHMARK(BM_ModXUnlikely)->Arg(1000);
 
 /*
--------------------------------------------------------------------
-Benchmark                         Time             CPU   Iterations
--------------------------------------------------------------------
-BM_ModX/100                 5282775 ns      5280662 ns          133
-BM_ModX/117                 5292172 ns      5288414 ns          133
-BM_ModX/500                 5289674 ns      5287939 ns          132
-BM_ModX/10000               5283601 ns      5281707 ns          133
-BM_ModX/10000000            5137059 ns      5135774 ns          137
-BM_ModXLikely/100           5276888 ns      5276470 ns          132
-BM_ModXLikely/117           5271931 ns      5271030 ns          133
-BM_ModXLikely/500           5273774 ns      5272835 ns          133
-BM_ModXLikely/10000         5298738 ns      5298353 ns          133
-BM_ModXLikely/10000000      5150119 ns      5149007 ns          135
-BM_ModXUnlikely/100         5281969 ns      5280652 ns          132
-BM_ModXUnlikely/117         5328615 ns      5324946 ns          130
-BM_ModXUnlikely/500         5311526 ns      5306679 ns          131
-BM_ModXUnlikely/10000       5290221 ns      5289129 ns          132
-BM_ModXUnlikely/10000000    5145523 ns      5144529 ns          136
+Only get numbers from RUN:
+---------------------------------------------------------------
+Benchmark                     Time             CPU   Iterations
+---------------------------------------------------------------
+BM_ModX/100               52980 ns        52959 ns        13244
+BM_ModX/117               52903 ns        52867 ns        13273
+BM_ModX/500               53576 ns        53330 ns        13282
+BM_ModX/1000              52852 ns        52845 ns        13132
+BM_ModXLikely/100         53653 ns        53601 ns        13097
+BM_ModXLikely/117         53733 ns        53677 ns        13087
+BM_ModXLikely/500         54643 ns        54457 ns        12679
+BM_ModXLikely/1000        53330 ns        53315 ns        12988
+BM_ModXUnlikely/100       53292 ns        53278 ns        13178
+BM_ModXUnlikely/117       53507 ns        53457 ns        13072
+BM_ModXUnlikely/500       53453 ns        53421 ns        13148
+BM_ModXUnlikely/1000      53372 ns        53355 ns        13144
 */
 
-// Analyze assembly for attribute code above
-
+// Analyze assembly for attribute code above using the following command:
 /*
-modX(unsigned long):
-    mov    x3, x0
-    mov    x5, #0x9680                ; =38528
-    stp    x29, x30, [sp, #-0x10]!
-    mov    x1, #0x0                   ; =0
-    mov    x0, #0x0                   ; =0
-    sub    x6, x3, #0x1
-    movk   x5, #0x98, lsl #16
-    mov    x29, sp
-    udiv   x2, x1, x3
-    add    x4, x0, x6
-    msub   x2, x2, x3, x1
-    add    x1, x1, #0x1
-    cmp    x2, #0x0
-    csinc  x0, x4, x0, ne
-    cmp    x1, x5
-    b.ne   0x100691340                ; <+32> at branch_prediction_benchmark.cpp:248:16
-    ldp    x29, x30, [sp], #0x10
-    ret
+nm ./cmake-build-release/experiments/branch_prediction_benchmark \
+| c++filt \
+| grep modXLikely
+0000000100001400 T modXLikely(unsigned long)
+
+otool -tvV ./cmake-build-release/experiments/branch_prediction_benchmark \
+| awk '$1 >= "0000000100001400" {print; if ($2 == "ret") exit}'
+
+*** Otool command: start printing at the address of modXLikely, stop printing until first return statement.
 */
 
+
+
 /*
-modXLikely(unsigned long):
-    mov    x3, x0
-    mov    x5, #0x9680                ; =38528
-    stp    x29, x30, [sp, #-0x10]!
-    mov    x1, #0x0                   ; =0
-    mov    x0, #0x0                   ; =0
-    sub    x6, x3, #0x1
-    movk   x5, #0x98, lsl #16
-    mov    x29, sp
-    udiv   x2, x1, x3
-    add    x4, x0, x6
-    msub   x2, x2, x3, x1
-    add    x1, x1, #0x1
-    cmp    x2, #0x0
-    csinc  x0, x4, x0, ne
-    cmp    x1, x5
-    b.ne   0x10098d460                ; <+32> at branch_prediction_benchmark.cpp:264:16
-    ldp    x29, x30, [sp], #0x10
-    ret
+modX:
+0000000100001350        mov     x5, #0x86a0
+0000000100001354        mov     x1, #0x0
+0000000100001358        mov     x3, #0x0
+000000010000135c        sub     x6, x0, #0x1
+0000000100001360        movk    x5, #0x1, lsl #16
+0000000100001364        udiv    x2, x1, x0
+0000000100001368        add     x4, x3, x6
+000000010000136c        msub    x2, x2, x0, x1
+0000000100001370        add     x1, x1, #0x1
+0000000100001374        cmp     x2, #0x0
+0000000100001378        csinc   x3, x4, x3, ne
+000000010000137c        cmp     x1, x5
+0000000100001380        b.ne    0x100001364
+0000000100001384        mov     x0, x3
+0000000100001388        ret
 */
 
 /*
-modUnlikelyX:
+modXLikelym:
+0000000100001400        mov     x5, #0x86a0
+0000000100001404        mov     x1, #0x0
+0000000100001408        mov     x3, #0x0
+000000010000140c        sub     x6, x0, #0x1
+0000000100001410        movk    x5, #0x1, lsl #16
+0000000100001414        nop
+0000000100001418        nop
+000000010000141c        nop
+0000000100001420        udiv    x2, x1, x0
+0000000100001424        add     x4, x3, x6
+0000000100001428        msub    x2, x2, x0, x1
+000000010000142c        add     x1, x1, #0x1
+0000000100001430        cmp     x2, #0x0
+0000000100001434        csinc   x3, x4, x3, ne
+0000000100001438        cmp     x1, x5
+000000010000143c        b.ne    0x100001420
+0000000100001440        mov     x0, x3
+0000000100001444        ret
+*/
 
+/*
+modXUnlikelym:
+000000010000152c        mov     x5, #0x86a0
+0000000100001530        mov     x1, #0x0
+0000000100001534        mov     x3, #0x0
+0000000100001538        sub     x6, x0, #0x1
+000000010000153c        movk    x5, #0x1, lsl #16
+0000000100001540        udiv    x2, x1, x0
+0000000100001544        add     x4, x3, x6
+0000000100001548        msub    x2, x2, x0, x1
+000000010000154c        add     x1, x1, #0x1
+0000000100001550        cmp     x2, #0x0
+0000000100001554        csinc   x3, x4, x3, ne
+0000000100001558        cmp     x1, x5
+000000010000155c        b.ne    0x100001540
+0000000100001560        mov     x0, x3
+0000000100001564        ret
 */
 
 
