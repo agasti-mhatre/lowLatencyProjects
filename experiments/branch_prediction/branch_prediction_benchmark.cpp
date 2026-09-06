@@ -448,6 +448,7 @@ Benchmark            Time             CPU   Iterations
 BM_forIfFor      30545 ns        30523 ns        22940
 BM_forForIf      87073 ns        87047 ns         8061
 
- * For sufficiently large j,
- * forIfFor is faster than forForIf
- */
+- For sufficiently large j,
+forIfFor is faster than forForIf
+
+*/
