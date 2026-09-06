@@ -357,7 +357,6 @@ BM_ModXUnlikely/500      996871 ns       996598 ns          704
 BM_ModXUnlikely/1000     979419 ns       979299 ns          716
 */
 
-
 /*
 modX:
 0000000100001350        mov     x4, #0x4240             x4 = 16960
@@ -373,4 +372,10 @@ modX:
 0000000100001378        b.ne    0x100001360
 000000010000137c        mov     x0, x3
 0000000100001380        ret
+
+- modXLikely/modXUnlikely have the same assembly code
+- Verdict: Attributes like [[likely]]/[[unlikely]] are compiler hints,
+which means that they may/may not reorganize assembly code. Thus, the
+latencies are unaffected.
+
 */
