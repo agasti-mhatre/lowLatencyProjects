@@ -322,6 +322,7 @@ static void BM_ModXUnlikely(benchmark::State& state) {
     }
 }
 
+/*
 BENCHMARK(BM_ModX)->Arg(100);
 BENCHMARK(BM_ModX)->Arg(117);
 BENCHMARK(BM_ModX)->Arg(500);
@@ -336,7 +337,7 @@ BENCHMARK(BM_ModXUnlikely)->Arg(100);
 BENCHMARK(BM_ModXUnlikely)->Arg(117);
 BENCHMARK(BM_ModXUnlikely)->Arg(500);
 BENCHMARK(BM_ModXUnlikely)->Arg(1000);
-
+*/
 
 /*
 Only get numbers from RUN:
@@ -377,5 +378,76 @@ modX:
 - Verdict: Attributes like [[likely]]/[[unlikely]] are compiler hints,
 which means that they may/may not reorganize assembly code. Thus, the
 latencies are unaffected.
-
 */
+
+constexpr int divisor = 5;
+
+__attribute__((noinline))
+int forIfFor(int z)
+{
+    int x = 0;
+    for (int i = 0; i < z; ++i)
+    {
+        if ((i % divisor) == 0)
+        {
+            for (int j = 0; j < 1000; ++j)
+            {
+                ++x;
+            }
+        }
+    }
+    return x;
+}
+
+__attribute__((noinline))
+int forForIf(int z)
+{
+    int x = 0;
+    for (int i = 0; i < z; ++i)
+    {
+        for (int j = 0; j < 1000; ++j)
+        {
+            if ((i % divisor) == 0)
+            {
+                ++x;
+            }
+        }
+    }
+    return x;
+}
+
+static void BM_forIfFor(benchmark::State& state)
+{
+    int z = 100000;
+    for (const auto& _ : state)
+    {
+        benchmark::DoNotOptimize(z);
+        auto result = forIfFor(z);
+        benchmark::DoNotOptimize(result);
+    }
+}
+
+static void BM_forForIf(benchmark::State& state)
+{
+    int z = 100000;
+    for (const auto& _ : state)
+    {
+        benchmark::DoNotOptimize(z);
+        auto result = forForIf(z);
+        benchmark::DoNotOptimize(result);
+    }
+}
+
+BENCHMARK(BM_forIfFor);
+BENCHMARK(BM_forForIf);
+
+/*
+------------------------------------------------------
+Benchmark            Time             CPU   Iterations
+------------------------------------------------------
+BM_forIfFor      30545 ns        30523 ns        22940
+BM_forForIf      87073 ns        87047 ns         8061
+
+ * For sufficiently large j,
+ * forIfFor is faster than forForIf
+ */

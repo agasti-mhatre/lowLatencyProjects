@@ -23,4 +23,6 @@ target_compile_options(
         branch_prediction_benchmark PRIVATE
         -fno-if-conversion
         -fno-if-conversion2
+        -fno-unroll-loops
+        -fno-unroll-all-loops
 )
