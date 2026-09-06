@@ -1,5 +1,7 @@
 #include <benchmark/benchmark.h>
 
+#include <vector>
+
 // clang++ -std=c++23 -O3 -S experiments/branch_prediction_benchmark.cpp -o branch_prediction.s
 // inspect compiled binary: otool -tvV cmake-build-debug/experiments/branch_prediction_benchmark
 
@@ -239,34 +241,37 @@ static void BM_MajorityHit(benchmark::State& state)
 // target_compile_options(branch_prediction_benchmark PRIVATE -O2)
 // in the local CMakeLists.txt
 
-static const unsigned long k = 100000;
+static const unsigned long k = 1000000;
 
 __attribute__((noinline))
 unsigned long modX(unsigned long x)
 {
-    unsigned long res = 0;
+    unsigned long res;
     for (unsigned long i = 0; i < k; ++i)
     {
-        if ((i % x) == 0){ ++res; }
-        else
+        if ((i % x) == 0)
         {
-            for (unsigned long i = 0; i < (x - 1); ++i) { ++res; }
+            ++res;
         }
     }
     return res;
 }
+// How to use lldb without Clion Debugger:
+// - lldb ./cmake-build-release/experiments/branch_prediction_benchmark
+// - breakpoint set -n 'modX(unsigned long)'
+// - run
+// - disassemble -f
 
 // Do [[likely]]/[[unlikely]] experiments next
 __attribute__((noinline))
 unsigned long modXLikely(unsigned long x)
 {
-    unsigned long res = 0;
+    unsigned long res;
     for (unsigned long i = 0; i < k; ++i)
     {
-        if ((i % x) == 0) [[likely]] { ++res; }
-        else
+        if ((i % x) == 0) [[likely]]
         {
-            for (unsigned long i = 0; i < (x - 1); ++i) { ++res; }
+            ++res;
         }
     }
     return res;
@@ -279,13 +284,12 @@ unsigned long modXLikely(unsigned long x)
 __attribute__((noinline))
 unsigned long modXUnlikely(unsigned long x)
 {
-    unsigned long res = 0;
+    unsigned long res;
     for (unsigned long i = 0; i < k; ++i)
     {
-        if ((i % x) == 0) [[unlikely]] { ++res; }
-        else
+        if ((i % x) == 0) [[unlikely]]
         {
-            for (unsigned long i = 0; i < (x - 1); ++i) { ++res; }
+            ++res;
         }
     }
     return res;
@@ -317,13 +321,6 @@ static void BM_ModXUnlikely(benchmark::State& state) {
         benchmark::DoNotOptimize(result);
     }
 }
-/*
-from lldb
-(base) agastimhatre@Agastis-MacBook-Air lowLatencyProjects % nm ./cmake-build-release/experiments/branch_prediction_benchmark \
-| c++filt \
-| grep modXLikely
-0000000100001440 T modXLikely(unsigned long)
-*/
 
 BENCHMARK(BM_ModX)->Arg(100);
 BENCHMARK(BM_ModX)->Arg(117);
@@ -340,99 +337,40 @@ BENCHMARK(BM_ModXUnlikely)->Arg(117);
 BENCHMARK(BM_ModXUnlikely)->Arg(500);
 BENCHMARK(BM_ModXUnlikely)->Arg(1000);
 
+
 /*
 Only get numbers from RUN:
 ---------------------------------------------------------------
 Benchmark                     Time             CPU   Iterations
 ---------------------------------------------------------------
-BM_ModX/100               52980 ns        52959 ns        13244
-BM_ModX/117               52903 ns        52867 ns        13273
-BM_ModX/500               53576 ns        53330 ns        13282
-BM_ModX/1000              52852 ns        52845 ns        13132
-BM_ModXLikely/100         53653 ns        53601 ns        13097
-BM_ModXLikely/117         53733 ns        53677 ns        13087
-BM_ModXLikely/500         54643 ns        54457 ns        12679
-BM_ModXLikely/1000        53330 ns        53315 ns        12988
-BM_ModXUnlikely/100       53292 ns        53278 ns        13178
-BM_ModXUnlikely/117       53507 ns        53457 ns        13072
-BM_ModXUnlikely/500       53453 ns        53421 ns        13148
-BM_ModXUnlikely/1000      53372 ns        53355 ns        13144
+BM_ModX/100             1137384 ns      1135455 ns          618
+BM_ModX/117             1122337 ns      1118431 ns          624
+BM_ModX/500             1005125 ns      1002088 ns          704
+BM_ModX/1000             982119 ns       980727 ns          707
+BM_ModXLikely/100       1139456 ns      1135823 ns          615
+BM_ModXLikely/117       1118923 ns      1117054 ns          625
+BM_ModXLikely/500        996263 ns       996011 ns          704
+BM_ModXLikely/1000       977421 ns       977244 ns          716
+BM_ModXUnlikely/100     1135108 ns      1133161 ns          621
+BM_ModXUnlikely/117     1112026 ns      1111968 ns          628
+BM_ModXUnlikely/500      996871 ns       996598 ns          704
+BM_ModXUnlikely/1000     979419 ns       979299 ns          716
 */
-
-// Analyze assembly for attribute code above using the following command:
-/*
-nm ./cmake-build-release/experiments/branch_prediction_benchmark \
-| c++filt \
-| grep modXLikely
-0000000100001400 T modXLikely(unsigned long)
-
-otool -tvV ./cmake-build-release/experiments/branch_prediction_benchmark \
-| awk '$1 >= "0000000100001400" {print; if ($2 == "ret") exit}'
-
-*** Otool command: start printing at the address of modXLikely, stop printing until first return statement.
-*/
-
 
 
 /*
 modX:
-0000000100001350        mov     x5, #0x86a0
-0000000100001354        mov     x1, #0x0
-0000000100001358        mov     x3, #0x0
-000000010000135c        sub     x6, x0, #0x1
-0000000100001360        movk    x5, #0x1, lsl #16
-0000000100001364        udiv    x2, x1, x0
-0000000100001368        add     x4, x3, x6
-000000010000136c        msub    x2, x2, x0, x1
-0000000100001370        add     x1, x1, #0x1
-0000000100001374        cmp     x2, #0x0
-0000000100001378        csinc   x3, x4, x3, ne
-000000010000137c        cmp     x1, x5
-0000000100001380        b.ne    0x100001364
-0000000100001384        mov     x0, x3
-0000000100001388        ret
+0000000100001350        mov     x4, #0x4240             x4 = 16960
+0000000100001354        mov     x1, #0x0                x1 = 0
+0000000100001358        movk    x4, #0xf, lsl #16
+000000010000135c        nop
+0000000100001360        udiv    x2, x1, x0
+0000000100001364        msub    x2, x2, x0, x1
+0000000100001368        add     x1, x1, #0x1
+000000010000136c        cbnz    x2, 0x100001374
+0000000100001370        add     x3, x3, #0x1
+0000000100001374        cmp     x1, x4
+0000000100001378        b.ne    0x100001360
+000000010000137c        mov     x0, x3
+0000000100001380        ret
 */
-
-/*
-modXLikelym:
-0000000100001400        mov     x5, #0x86a0
-0000000100001404        mov     x1, #0x0
-0000000100001408        mov     x3, #0x0
-000000010000140c        sub     x6, x0, #0x1
-0000000100001410        movk    x5, #0x1, lsl #16
-0000000100001414        nop
-0000000100001418        nop
-000000010000141c        nop
-0000000100001420        udiv    x2, x1, x0
-0000000100001424        add     x4, x3, x6
-0000000100001428        msub    x2, x2, x0, x1
-000000010000142c        add     x1, x1, #0x1
-0000000100001430        cmp     x2, #0x0
-0000000100001434        csinc   x3, x4, x3, ne
-0000000100001438        cmp     x1, x5
-000000010000143c        b.ne    0x100001420
-0000000100001440        mov     x0, x3
-0000000100001444        ret
-*/
-
-/*
-modXUnlikelym:
-000000010000152c        mov     x5, #0x86a0
-0000000100001530        mov     x1, #0x0
-0000000100001534        mov     x3, #0x0
-0000000100001538        sub     x6, x0, #0x1
-000000010000153c        movk    x5, #0x1, lsl #16
-0000000100001540        udiv    x2, x1, x0
-0000000100001544        add     x4, x3, x6
-0000000100001548        msub    x2, x2, x0, x1
-000000010000154c        add     x1, x1, #0x1
-0000000100001550        cmp     x2, #0x0
-0000000100001554        csinc   x3, x4, x3, ne
-0000000100001558        cmp     x1, x5
-000000010000155c        b.ne    0x100001540
-0000000100001560        mov     x0, x3
-0000000100001564        ret
-*/
-
-
-// TODO: Do hot path, with for(if (...)) and if(for(...))

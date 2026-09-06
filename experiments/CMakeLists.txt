@@ -19,4 +19,8 @@ target_link_libraries(
         benchmark::benchmark_main
 )
 
-#target_compile_options(branch_prediction_benchmark PRIVATE -O2) # Debug Mode will use optimized compiled Assembly, not debug assembly
+target_compile_options(
+        branch_prediction_benchmark PRIVATE
+        -fno-if-conversion
+        -fno-if-conversion2
+)
