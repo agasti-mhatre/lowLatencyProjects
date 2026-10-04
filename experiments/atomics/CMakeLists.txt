@@ -19,3 +19,8 @@ target_link_libraries(
         benchmark::benchmark_main
 )
 
+target_compile_options(
+        atomics_benchmark PRIVATE
+        -g
+)
+
