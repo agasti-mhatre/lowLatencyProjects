@@ -159,9 +159,9 @@ BENCHMARK_CAS_WEAK        22926 ns        10616 ns        65309
 where fetch_add is carried out unconditionally.
  */
 
-///  HIGH CONTENTION   ///
+///-----HIGH CONTENTION EXPERIMENTS-----///
 
-constexpr int num_threads = 1000;
+constexpr int num_threads = 8;
 
 int mutex_increment_high_cont(int n)
 {
@@ -248,14 +248,14 @@ int cas_strong_increment_high_cont(int n)
     return x;
 }
 
-constexpr int n2 = 100;
+constexpr int n2 = 1'000'000;
 
 static void BENCHMARK_MUTEX_HIGH_CONT(benchmark::State& state)
 {
     for (auto _ : state)
     {
         benchmark::DoNotOptimize(n2);
-        auto result = mutex_increment(n2);
+        auto result = mutex_increment_high_cont(n2);
         benchmark::DoNotOptimize(result);
     }
 }
@@ -265,7 +265,7 @@ static void BENCHMARK_ATOMIC_HIGH_CONT(benchmark::State& state)
     for (auto _ : state)
     {
         benchmark::DoNotOptimize(n2);
-        auto result = atomic_increment(n2);
+        auto result = atomic_increment_high_cont(n2);
         benchmark::DoNotOptimize(result);
     }
 }
@@ -279,7 +279,6 @@ static void BENCHMARK_CAS_INCREMENT_HIGH_CONT(benchmark::State& state)
         benchmark::DoNotOptimize(result);
     }
 }
-
 BENCHMARK(BENCHMARK_MUTEX_HIGH_CONT);
 BENCHMARK(BENCHMARK_ATOMIC_HIGH_CONT);
 BENCHMARK(BENCHMARK_CAS_INCREMENT_HIGH_CONT);
@@ -288,12 +287,11 @@ BENCHMARK(BENCHMARK_CAS_INCREMENT_HIGH_CONT);
     ----------------------------------------------------------------------------
     Benchmark                                  Time             CPU   Iterations
     ----------------------------------------------------------------------------
-    BENCHMARK_MUTEX_HIGH_CONT              17645 ns        11924 ns        58562
-    BENCHMARK_ATOMIC_HIGH_CONT             16255 ns        11904 ns        59011
-    BENCHMARK_CAS_INCREMENT_HIGH_CONT    6659049 ns      6651390 ns          105
-
-    
+    BENCHMARK_MUTEX_HIGH_CONT          151642430 ns        78250 ns          100
+    BENCHMARK_ATOMIC_HIGH_CONT         119628661 ns        73480 ns          100
+    BENCHMARK_CAS_INCREMENT_HIGH_CONT  729498601 ns        87500 ns           10
 */
 
 // TODO: Do spin lock comparison
 // TODO: Investigate CAS weak vs CAS strong memory ordering in godbolt
+// TODO : For threadpool experiments, do increasing thread counts
