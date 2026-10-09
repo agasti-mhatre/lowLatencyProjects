@@ -38,7 +38,7 @@ int mutex_increment(int n)
 int atomic_increment(int n)
 {
     std::atomic<int> x = 0;
-    auto info = [&x](int n)
+    auto inc = [&x](int n)
     {
         for (int i = 0; i < n; ++i)
         {
@@ -46,8 +46,8 @@ int atomic_increment(int n)
         }
     };
 
-    std::thread one{info, n};
-    std::thread two{info, n};
+    std::thread one{inc, n};
+    std::thread two{inc, n};
 
     one.join();
     two.join();
@@ -58,7 +58,7 @@ int atomic_increment(int n)
 int cas_strong_increment(int n)
 {
     std::atomic<int> x = 0;
-    auto info = [&x](int n)
+    auto inc = [&x](int n)
     {
         int i = 0;
         while (i < n)
@@ -68,8 +68,8 @@ int cas_strong_increment(int n)
         }
     };
 
-    std::thread one{info, n};
-    std::thread two{info, n};
+    std::thread one{inc, n};
+    std::thread two{inc, n};
 
     one.join();
     two.join();
@@ -80,7 +80,7 @@ int cas_strong_increment(int n)
 int cas_weak_increment(int n)
 {
     std::atomic<int> x = 0;
-    auto info = [&x](int n)
+    auto inc = [&x](int n)
     {
         int i = 0;
         while (i < n)
@@ -90,8 +90,8 @@ int cas_weak_increment(int n)
         }
     };
 
-    std::thread one{info, n};
-    std::thread two{info, n};
+    std::thread one{inc, n};
+    std::thread two{inc, n};
 
     one.join();
     two.join();
@@ -141,10 +141,10 @@ static void BENCHMARK_CAS_WEAK(benchmark::State& state)
     }
 }
 
-BENCHMARK(BENCHMARK_MUTEX);
-BENCHMARK(BENCHMARK_ATOMIC);
-BENCHMARK(BENCHMARK_CAS_STRONG);
-BENCHMARK(BENCHMARK_CAS_WEAK);
+// BENCHMARK(BENCHMARK_MUTEX);
+// BENCHMARK(BENCHMARK_ATOMIC);
+// BENCHMARK(BENCHMARK_CAS_STRONG);
+// BENCHMARK(BENCHMARK_CAS_WEAK);
 
 /*
 ---------------------------------------------------------------
@@ -161,6 +161,8 @@ where fetch_add is carried out unconditionally.
 
 ///  HIGH CONTENTION   ///
 
+constexpr int num_threads = 1000;
+
 int mutex_increment_high_cont(int n)
 {
     int x = 0;
@@ -174,11 +176,18 @@ int mutex_increment_high_cont(int n)
         }
     };
 
-    std::thread one{ inc, n };
-    std::thread two{inc,  n };
+    std::vector<std::thread> threadpool;
+    threadpool.reserve(num_threads);
 
-    one.join();
-    two.join();
+    for (int i = 0; i < num_threads; ++i)
+    {
+        threadpool.emplace_back(inc, n);
+    }
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        threadpool[i].join();
+    }
 
     return x;
 }
@@ -186,31 +195,67 @@ int mutex_increment_high_cont(int n)
 int atomic_increment_high_cont(int n)
 {
     std::atomic<int> x = 0;
-    auto info = [&x](int n)
+    auto inc = [&x](int n)
     {
         for (int i = 0; i < n; ++i)
         {
-            ++x; // bl std::__atomic_base<int>::operator++()
+            ++x;
         }
     };
 
-    std::thread one{info, n};
-    std::thread two{info, n};
+    std::vector<std::thread> threadpool;
+    threadpool.reserve(num_threads);
 
-    one.join();
-    two.join();
+    for (int i = 0; i < num_threads; ++i)
+    {
+        threadpool.emplace_back(inc, n);
+    }
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        threadpool[i].join();
+    }
 
     return x;
 }
 
-constexpr int n2 = 50;
+int cas_strong_increment_high_cont(int n)
+{
+    std::atomic<int> x = 0;
+    auto inc = [&x](int n)
+    {
+        int i = 0;
+        while (i < n)
+        {
+            int expected = x.load();
+            i += x.compare_exchange_strong(expected, expected + 1);
+        }
+    };
+
+    std::vector<std::thread> threadpool;
+    threadpool.reserve(num_threads);
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        threadpool.emplace_back(inc, n);
+    }
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        threadpool[i].join();
+    }
+
+    return x;
+}
+
+constexpr int n2 = 100;
 
 static void BENCHMARK_MUTEX_HIGH_CONT(benchmark::State& state)
 {
     for (auto _ : state)
     {
-        benchmark::DoNotOptimize(n);
-        auto result = mutex_increment(n);
+        benchmark::DoNotOptimize(n2);
+        auto result = mutex_increment(n2);
         benchmark::DoNotOptimize(result);
     }
 }
@@ -219,16 +264,36 @@ static void BENCHMARK_ATOMIC_HIGH_CONT(benchmark::State& state)
 {
     for (auto _ : state)
     {
-        benchmark::DoNotOptimize(n);
-        auto result = atomic_increment(n);
+        benchmark::DoNotOptimize(n2);
+        auto result = atomic_increment(n2);
         benchmark::DoNotOptimize(result);
     }
 }
 
+static void BENCHMARK_CAS_INCREMENT_HIGH_CONT(benchmark::State& state)
+{
+    for (auto _ : state)
+    {
+        benchmark::DoNotOptimize(n2);
+        auto result = cas_strong_increment_high_cont(n2);
+        benchmark::DoNotOptimize(result);
+    }
+}
 
 BENCHMARK(BENCHMARK_MUTEX_HIGH_CONT);
 BENCHMARK(BENCHMARK_ATOMIC_HIGH_CONT);
+BENCHMARK(BENCHMARK_CAS_INCREMENT_HIGH_CONT);
 
+/*
+    ----------------------------------------------------------------------------
+    Benchmark                                  Time             CPU   Iterations
+    ----------------------------------------------------------------------------
+    BENCHMARK_MUTEX_HIGH_CONT              17645 ns        11924 ns        58562
+    BENCHMARK_ATOMIC_HIGH_CONT             16255 ns        11904 ns        59011
+    BENCHMARK_CAS_INCREMENT_HIGH_CONT    6659049 ns      6651390 ns          105
+
+    
+*/
 
 // TODO: Do spin lock comparison
 // TODO: Investigate CAS weak vs CAS strong memory ordering in godbolt
